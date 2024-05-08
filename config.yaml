@@ -25,7 +25,7 @@ monitors:
 
   - id: gb-myfoodfast-co-uk
     name: Websites
-    description: 'Frontend Websites for restuants'
+    description: 'Frontend Websites for restaurants'
     url: 'https://gb.myfoodfast.co.uk/'
     method: GET
     expectStatus: 200
