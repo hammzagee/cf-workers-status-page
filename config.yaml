@@ -29,3 +29,4 @@ monitors:
     url: 'https://gb.myfoodfast.co.uk/'
     method: GET
     expectStatus: 200
+    linkable: false
