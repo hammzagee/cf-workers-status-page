@@ -1,6 +1,7 @@
 import config from '../../config.yaml'
 
 import {
+  notifyGoogleChat,
   notifySlack,
   notifyTelegram,
   getCheckLocation,
@@ -96,6 +97,15 @@ export async function processCronTrigger(event) {
       SECRET_DISCORD_WEBHOOK_URL !== 'default-gh-action-secret'
     ) {
       event.waitUntil(notifyDiscord(monitor, monitorOperational))
+    }
+
+    // Send google chat message on monitor change
+    if (
+      monitorStatusChanged &&
+      typeof SECRET_GOOGLE_CHAT_WEBHOOK_URL !== 'undefined' &&
+      SECRET_GOOGLE_CHAT_WEBHOOK_URL !== 'default-gh-action-secret'
+    ) {
+      event.waitUntil(notifyGoogleChat(monitor, monitorOperational))
     }
 
     // make sure checkDay exists in checks in cases when needed
