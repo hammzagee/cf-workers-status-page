@@ -61,12 +61,6 @@ export async function notifySlack(monitor, operational) {
 }
 
 export async function notifyGoogleChat(monitor, operational) {
-  const options = {
-    method: 'POST',
-    hostname: 'chat.googleapis.com',
-    port: 443,
-    path: SECRET_GOOGLE_CHAT_WEBHOOK_URL
-  }
   const payload = {
     text: `Monitor *${monitor.name.replaceAll(
       '-',
@@ -75,94 +69,86 @@ export async function notifyGoogleChat(monitor, operational) {
   ${operational ? '✅' : '❌'} \`${monitor.method ? monitor.method : 'GET'} ${monitor.url
       }\` \\- 👀 [Status Page](${config.settings.url})`,
   }
-  return new Promise((resolve, reject) => {
-    const req = https.request(options, (res) => {
-      res.on('data', (d) => {
-        resolve(d)
-      })
-    })
-
-    req.on('error', (e) => {
-      reject(e)
-    })
-
-    req.write(JSON.stringify(payload))
-    req.end()
-  }
+  return fetch(SECRET_GOOGLE_CHAT_WEBHOOK_URL, {
+    body: JSON.stringify(payload),
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
 
 export async function notifyTelegram(monitor, operational) {
-    const text = `Monitor *${monitor.name.replaceAll(
-      '-',
-      '\\-',
-    )}* changed status to *${getOperationalLabel(operational)}*
+  const text = `Monitor *${monitor.name.replaceAll(
+    '-',
+    '\\-',
+  )}* changed status to *${getOperationalLabel(operational)}*
   ${operational ? '✅' : '❌'} \`${monitor.method ? monitor.method : 'GET'} ${monitor.url
-      }\` \\- 👀 [Status Page](${config.settings.url})`
+    }\` \\- 👀 [Status Page](${config.settings.url})`
 
-    const payload = new FormData()
-    payload.append('chat_id', SECRET_TELEGRAM_CHAT_ID)
-    payload.append('parse_mode', 'MarkdownV2')
-    payload.append('text', text)
+  const payload = new FormData()
+  payload.append('chat_id', SECRET_TELEGRAM_CHAT_ID)
+  payload.append('parse_mode', 'MarkdownV2')
+  payload.append('text', text)
 
-    const telegramUrl = `https://api.telegram.org/bot${SECRET_TELEGRAM_API_TOKEN}/sendMessage`
-    return fetch(telegramUrl, {
-      body: payload,
-      method: 'POST',
-    })
+  const telegramUrl = `https://api.telegram.org/bot${SECRET_TELEGRAM_API_TOKEN}/sendMessage`
+  return fetch(telegramUrl, {
+    body: payload,
+    method: 'POST',
+  })
+}
+
+// Visualize your payload using https://leovoel.github.io/embed-visualizer/
+export async function notifyDiscord(monitor, operational) {
+  const payload = {
+    username: `${config.settings.title}`,
+    avatar_url: `${config.settings.url}/${config.settings.logo}`,
+    embeds: [
+      {
+        title: `${monitor.name} is ${getOperationalLabel(operational)} ${operational ? ':white_check_mark:' : ':x:'
+          }`,
+        description: `\`${monitor.method ? monitor.method : 'GET'} ${monitor.url
+          }\` - :eyes: [Status Page](${config.settings.url})`,
+        color: operational ? 3581519 : 13632027,
+      },
+    ],
   }
+  return fetch(SECRET_DISCORD_WEBHOOK_URL, {
+    body: JSON.stringify(payload),
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
 
-  // Visualize your payload using https://leovoel.github.io/embed-visualizer/
-  export async function notifyDiscord(monitor, operational) {
-    const payload = {
-      username: `${config.settings.title}`,
-      avatar_url: `${config.settings.url}/${config.settings.logo}`,
-      embeds: [
-        {
-          title: `${monitor.name} is ${getOperationalLabel(operational)} ${operational ? ':white_check_mark:' : ':x:'
-            }`,
-          description: `\`${monitor.method ? monitor.method : 'GET'} ${monitor.url
-            }\` - :eyes: [Status Page](${config.settings.url})`,
-          color: operational ? 3581519 : 13632027,
-        },
-      ],
+export function useKeyPress(targetKey) {
+  const [keyPressed, setKeyPressed] = useState(false)
+
+  function downHandler({ key }) {
+    if (key === targetKey) {
+      setKeyPressed(true)
     }
-    return fetch(SECRET_DISCORD_WEBHOOK_URL, {
-      body: JSON.stringify(payload),
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    })
   }
 
-  export function useKeyPress(targetKey) {
-    const [keyPressed, setKeyPressed] = useState(false)
-
-    function downHandler({ key }) {
-      if (key === targetKey) {
-        setKeyPressed(true)
-      }
+  const upHandler = ({ key }) => {
+    if (key === targetKey) {
+      setKeyPressed(false)
     }
+  }
 
-    const upHandler = ({ key }) => {
-      if (key === targetKey) {
-        setKeyPressed(false)
-      }
+  useEffect(() => {
+    window.addEventListener('keydown', downHandler)
+    window.addEventListener('keyup', upHandler)
+
+    return () => {
+      window.removeEventListener('keydown', downHandler)
+      window.removeEventListener('keyup', upHandler)
     }
+  }, [])
 
-    useEffect(() => {
-      window.addEventListener('keydown', downHandler)
-      window.addEventListener('keyup', upHandler)
+  return keyPressed
+}
 
-      return () => {
-        window.removeEventListener('keydown', downHandler)
-        window.removeEventListener('keyup', upHandler)
-      }
-    }, [])
-
-    return keyPressed
-  }
-
-  export async function getCheckLocation() {
-    const res = await fetch('https://cloudflare-dns.com/dns-query', {
-      method: 'OPTIONS',
-    })
-    return res.headers.get('cf-ray').split('-')[1]
-  }
+export async function getCheckLocation() {
+  const res = await fetch('https://cloudflare-dns.com/dns-query', {
+    method: 'OPTIONS',
+  })
+  return res.headers.get('cf-ray').split('-')[1]
+}
